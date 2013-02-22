@@ -1,7 +1,7 @@
 /******************************************************************************
- * Linux Serial Library
+ * Linux serial library
  * 
- * Copied and altered from https://github.com/mrshu/serialib
+ * Mostly based on: https://github.com/mrshu/serialib
  ******************************************************************************/
 #include "serialib.h"
 
@@ -86,4 +86,3 @@ int serial_write(serial *s, char* str)
 		return -1;
 	return 0;
 }
-
