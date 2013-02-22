@@ -1,7 +1,7 @@
 /******************************************************************************
  * FIR filter implementation in C
  *
- *	compile command: gcc level1.c -o main
+ * compile command: gcc level1.c -o main
  *
  * ihsan kehribar - 2013
  *****************************************************************************/
