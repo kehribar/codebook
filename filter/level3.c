@@ -1,7 +1,7 @@
 /******************************************************************************
  * FIR filter implementation in C
  *
- * compile command: gcc level2.c serialib.c -o main
+ * compile command: gcc level3.c serialib.c -o main
  *
  * ihsan kehribar - 2013
  *****************************************************************************/
@@ -130,6 +130,7 @@ int main()
 	float output;
 	float input;
 	char buffer[128];
+	uint32_t input_int;
 
 	initFir();
 	printf("Hi there!\n");
@@ -148,9 +149,11 @@ int main()
 	while(1)
 	{
 		serial_read(s, buffer, '\n', sizeof(buffer));
-		if(strlen(buffer) > 0)
+		if(strlen(buffer) > 0)		
 		{
-			sprintf(buffer,"%f\n",&input);
+			// printf("Raw buffer: %s",buffer);
+			sscanf(buffer,"%d\n",&input_int);
+			input = (float)input_int;
 			output = updateFir(input);
 			printf("#i: %f - #o: %f\n",input,output);
 		}
