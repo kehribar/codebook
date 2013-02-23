@@ -1,22 +1,14 @@
 /******************************************************************************
  * FIR filter implementation in C
  *
- * compile command:	gcc level2.c -o main
- *					gcc level2.c -o main -lrt => if PROFILE is enabled
+ * compile command: gcc level2.c serialib.c -o main
  *
  * ihsan kehribar - 2013
  *****************************************************************************/
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
-#define PROFILE 1
-
-#if PROFILE
-	#include <time.h>
-	struct timespec start;
-	struct timespec end;
-	long int diff;
-#endif
+#include "serialib.h"
 
 /* Filter related definitions */
 #define N 254 
@@ -134,55 +126,33 @@ float updateFir(float newSample)
 
 int main()
 {
-	int r;
-	FILE *raw;
-	FILE *filtered;
-	float temp_input;
-	float temp_output;
-	int lineNumber = 0;
-	char inputBuffer[512];
+	serial *s;
+	float output;
+	float input;
+	char buffer[128];
 
 	initFir();
 	printf("Hi there!\n");
 
-	raw = fopen("raw.txt","r");
-	if(raw == NULL)
+	if (serial_open(&s, "/dev/ttyUSB0", 115200) == 0)
 	{
-		printf("Couldn't open the input file!\n");
-		return -1;
-	}
+		printf("Port opened.\n");
 
-	filtered = fopen("output.txt","w");
-	if(filtered == NULL)
+	} 
+	else 
 	{
-		printf("Couldn't create the output file!\n");
+		printf("Problem with port opening\n");
 		return -1;
 	}
 
 	while(1)
 	{
-		if(fgets(inputBuffer,sizeof(inputBuffer),raw) != NULL)
+		serial_read(s, buffer, '\n', sizeof(buffer));
+		if(strlen(buffer) > 0)
 		{
-			sscanf(inputBuffer,"%f\n",&temp_input);
-			
-			#if PROFILE
-				clock_gettime(CLOCK_REALTIME,&start);
-			#endif
-			
-			temp_output = updateFir(temp_input);
-			
-			#if PROFILE
-				clock_gettime(CLOCK_REALTIME,&end);
-				diff = end.tv_nsec - start.tv_nsec;
-				printf("Time: %d ns\n",diff);
-			#endif
-			
-			fprintf(filtered,"%f\n",temp_output);
-			printf("#l:%d #i:%f #o:%f\n",lineNumber++,temp_input,temp_output);
-		}
-		else
-		{
-			break;
+			sprintf(buffer,"%f\n",&input);
+			output = updateFir(input);
+			printf("#i: %f - #o: %f\n",input,output);
 		}
 	}
 
