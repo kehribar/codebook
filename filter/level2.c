@@ -5,15 +5,16 @@
  *
  * ihsan kehribar - 2013
  *****************************************************************************/
-#define PROFILE 1
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+#define PROFILE 1
+
 #if PROFILE
-#include <time.h>
-struct timespec start;
-struct timespec end;
-long int diff;
+	#include <time.h>
+	struct timespec start;
+	struct timespec end;
+	long int diff;
 #endif
 
 /* Filter related definitions */
@@ -73,7 +74,6 @@ const float B_fir[N] = {
   -0.0003619017371,-0.0003544345964,-0.0003270824382,-0.0002866012219,-0.0002391130984,
    -0.00018962592,-0.0001422338391,-9.984209464e-05,-0.0001005471131
 };
-
 
 void initFir()
 {
@@ -163,15 +163,19 @@ int main()
 		if(fgets(inputBuffer,sizeof(inputBuffer),raw) != NULL)
 		{
 			sscanf(inputBuffer,"%f\n",&temp_input);
+			
 			#if PROFILE
-			clock_gettime(CLOCK_REALTIME,&start);
+				clock_gettime(CLOCK_REALTIME,&start);
 			#endif
+			
 			temp_output = updateFir(temp_input);
+			
 			#if PROFILE
-			clock_gettime(CLOCK_REALTIME,&end);
-			diff = end.tv_nsec - start.tv_nsec;
-			printf("Time: %d ns\n",diff);
+				clock_gettime(CLOCK_REALTIME,&end);
+				diff = end.tv_nsec - start.tv_nsec;
+				printf("Time: %d ns\n",diff);
 			#endif
+			
 			fprintf(filtered,"%f\n",temp_output);
 			printf("#l:%d #i:%f #o:%f\n",lineNumber++,temp_input,temp_output);
 		}
