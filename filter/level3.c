@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include "../seriarl/serialib.h"
+#include "../serial/serialib.h"
 
 /* Filter related definitions */
 #define N 254 
