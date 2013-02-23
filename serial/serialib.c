@@ -60,8 +60,9 @@ int serial_read(serial *s, char *buf, char eol, unsigned int len)
 		int j = serial_read_char(s, &buf[i++]);
 		
 		if (j != 0){
-			buf[i-1] = '\0';
-			return -1;
+			i--; /* discard this ... */
+			// buf[i-1] = '\0';
+			// return -1;
 		}
 
 		if (buf[i-1] == eol){

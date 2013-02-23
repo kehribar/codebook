@@ -1,14 +1,14 @@
 /******************************************************************************
  * FIR filter implementation in C
  *
- * compile command: gcc level3.c serialib.c -o main
+ * compile command: gcc level3.c ../serial/serialib.c -o main
  *
  * ihsan kehribar - 2013
  *****************************************************************************/
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include "serialib.h"
+#include "../seriarl/serialib.h"
 
 /* Filter related definitions */
 #define N 254 
@@ -127,6 +127,7 @@ float updateFir(float newSample)
 int main()
 {
 	serial *s;
+	int retVal;
 	float output;
 	float input;
 	char buffer[128];
@@ -135,7 +136,7 @@ int main()
 	initFir();
 	printf("Hi there!\n");
 
-	if (serial_open(&s, "/dev/ttyUSB0", 115200) == 0)
+	if (serial_open(&s, "/dev/tty.usbserial-A900cbrd", 115200) == 0)
 	{
 		printf("Port opened.\n");
 
@@ -148,14 +149,14 @@ int main()
 
 	while(1)
 	{
-		serial_read(s, buffer, '\n', sizeof(buffer));
+		retVal = serial_read(s, buffer, '\n', sizeof(buffer));
 		if(strlen(buffer) > 0)		
 		{
 			// printf("Raw buffer: %s",buffer);
 			sscanf(buffer,"%d\n",&input_int);
 			input = (float)input_int;
 			output = updateFir(input);
-			printf("#i: %f - #o: %f\n",input,output);
+			printf("#r: %d - #i: %f - #o: %f\n",retVal,input,output);
 		}
 	}
 
