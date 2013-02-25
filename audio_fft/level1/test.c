@@ -44,7 +44,7 @@ int main(void)
     power = (out[i][0]*out[i][0]) + (out[i][1]*out[i][1]); 
     amplitude = sqrt(power);
     amplitude = amplitude/(N/2);
-    frequency = (float)i*freq_step
+    frequency = (float)i*freq_step;
     printf("%.3f  %f\n",frequency,amplitude);   
   }
 
