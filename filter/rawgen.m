@@ -4,14 +4,14 @@
 clc;clear all;close all;
 
 F_SAMPLING = 1000; % in Hertz
-TIME_LENGTH = 0.8; % in seconds
+TIME_LENGTH = 1.024; % in seconds
 
 DATA_POINTS = TIME_LENGTH * F_SAMPLING;
 input = zeros(1,DATA_POINTS);
 
 t = (0 : 1/F_SAMPLING : (TIME_LENGTH-(1/F_SAMPLING)));
-f = [4,300,400.5];
-c = [1,0.1,0.1];
+f = [40,100,400.5];
+c = [1,0.3,0.1];
 
 for k = 1:length(f)
     input = input + (c(k) * sin(2*pi*f(k)*t));
@@ -29,10 +29,13 @@ for k = 1:DATA_POINTS
 end
 fclose(fd);
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-figure;
-plot(output(254:length(output)));
-hold;
-plot(input(254:length(input)),'r');
+Fs = F_SAMPLING;
+NFFT = 2^nextpow2(DATA_POINTS);
+Y = fft(input,NFFT)/DATA_POINTS;
+f = Fs/2*linspace(0,1,NFFT/2+1);
 
-
+% Plot single-sided amplitude spectrum.
+figure; plot(f,2*abs(Y(1:NFFT/2+1))) 
+title('Single-Sided Amplitude Spectrum of y(t)')
+xlabel('Frequency (Hz)')
+ylabel('|Y(f)|')
