@@ -5,7 +5,6 @@
 *
 **************************************************************************/
 #include <stdlib.h>
-#include <GL/glew.h>
 #ifdef __APPLE__
 #  include <GLUT/glut.h>
 #else
@@ -33,7 +32,7 @@
 
 /* default window size */
 const int HEIGHT = 256;
-const int WIDTH = 1024;
+const int WIDTH = 800;
 
 float xcirc[FIRSIZE]; 
 uint16_t newest = 0;
@@ -241,7 +240,6 @@ int main(int argc, char** argv)
 	glutIdleFunc(&idle_function);
 	glutDisplayFunc(&display_function);
 
-	glewInit();
 	myinit();
 	
 	glutMainLoop();
