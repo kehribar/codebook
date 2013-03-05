@@ -26,7 +26,7 @@
 #define FRAMES_PER_BUFFER 512
 #define FIRSIZE 101 
 #define FILTER_ENABLE 1
-#define SUBSAMPLE 8
+#define SUBSAMPLE 4
 #define SAMPLECOUNT (FRAMES_PER_BUFFER / SUBSAMPLE)
 #define PI 3.14159265358979
 
@@ -194,10 +194,11 @@ static void display_function(void)
 	sprintf(printBuffer,"F_sampling: %.2f Hz",(float)F_SAMP/SUBSAMPLE);
 	glutPrint(WIDTH/128, (7*HEIGHT/8)+15, printBuffer, 0.85f, 0.85f, 0.85f, 0.0f);
 	
-	
 	int x_step = 1;
 	int step = (N/2) / WIDTH;
-	int gain = 10;
+	int gain = 5;
+	int maximum = 0;
+	int max_index;
 
 	glBegin(GL_LINES);     
 
@@ -205,7 +206,13 @@ static void display_function(void)
 		{
 			glColor3f ( 1.0, 0.0, 0.0);       
 			glVertex2f( i, gain * powArray[i*step]);         
-			glVertex2f( i+x_step, gain * powArray[(i+x_step)*step]);       
+			glVertex2f( i+x_step, gain * powArray[(i+x_step)*step]); 
+
+			if(powArray[i*step]>maximum)
+			{
+				maximum = powArray[i*step];
+				max_index = i*step;
+			}      
 		
 			glColor3f ( 0.0, 0.0, 0.0);       
 			glVertex2f( i, (HEIGHT/2) + (100 * gain * prein[i*step/2][REAL]));         
@@ -213,6 +220,10 @@ static void display_function(void)
 		}
 
 	glEnd();
+
+	sprintf(printBuffer,"Peak freq: %.2f Hz",(float)max_index*freq_step);
+	glutPrint(WIDTH/128, (7*HEIGHT/8)-30, printBuffer, 0.85f, 0.85f, 0.85f, 0.0f);
+	
 
 	//glFlush();
 	glutSwapBuffers();
