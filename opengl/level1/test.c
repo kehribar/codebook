@@ -17,15 +17,15 @@
 #include "fdacoefs.h" // Coefficients for 44.1kHz sample rate, ~2kHz cutoff low pass
 #include "fftw3.h"
 
-#define N 8192
+#define N 2048
 #define REAL 0
 #define IMAG 1
 #define F_SAMP 44100
 #define SAMPLE_RATE  F_SAMP
-#define FRAMES_PER_BUFFER 512
+#define FRAMES_PER_BUFFER 1024
 #define FIRSIZE 101 
-#define FILTER_ENABLE 0
-#define SUBSAMPLE 1
+#define FILTER_ENABLE 1
+#define SUBSAMPLE 8
 #define SAMPLECOUNT (FRAMES_PER_BUFFER / SUBSAMPLE)
 #define PI 3.14159265358979
 
@@ -33,6 +33,11 @@
 const int HEIGHT = 450;
 const int WIDTH = 1000;
 
+PaStreamParameters inputParameters;
+PaStream *stream = NULL;
+PaError err;
+fftw_complex *in, *out, *prein; /* pointers for FFT input, output */
+fftw_plan my_plan; /* store the type of FFT we want to perform */
 int errCount = 0;
 float xcirc[FIRSIZE]; 
 uint16_t newest = 0;
@@ -41,16 +46,16 @@ int i,q,t;
 double power;
 double amplitude;
 double freq_step = (double)F_SAMP / (double)N / SUBSAMPLE;
-PaStreamParameters inputParameters;
-PaStream *stream = NULL;
-PaError err;
 float *sampleBlock;
 int numBytes;    
-fftw_complex *in, *out, *prein; /* pointers for FFT input, output */
-fftw_plan my_plan; /* store the type of FFT we want to perform */
 float hammingWindow[N];
 float powArray[N];
 char printBuffer[128];
+
+int xCursor1;
+int xCursor2;
+int yCursor1;
+int yCursor2;
 
 float updateFir(float newSample)
 {
@@ -164,7 +169,6 @@ static void idle_function(void)
 	glutPostRedisplay();
 }
 
-// Here is the function 
 void glutPrint(float x, float y, char* text, float r, float g, float b, float a)
 { 
     if(!text || !strlen(text)) return; 
@@ -180,8 +184,44 @@ void glutPrint(float x, float y, char* text, float r, float g, float b, float a)
     if(!blending) glDisable(GL_BLEND); 
 }  
 
+void myMouseFunc( int button, int state, int x, int y ) 
+{
+	printf("button: %d state: %d x_pos: %d y_pos: %d\n",button,state,x,y);
+	if(button == 0)
+	{
+		xCursor1 = x;
+		yCursor1 = y;
+	}
+	else if(button==2)
+	{
+		xCursor2 = x;
+		yCursor2 = y;
+	}
+}
+
+void keyb(unsigned char key, int x, int y)
+{
+	if(key==32)
+	{
+		xCursor1 = 0;
+		xCursor2 = 0;
+		yCursor1 = 0;
+		yCursor2 = 0;
+	}
+	else
+		printf("%d\n",key);	
+}
+
 static void display_function(void)
 {
+
+	int x_step = 1;
+	int step = (N/2) / WIDTH;
+	int gain = 5;
+	int maximum = 0;
+	int max_index;
+	int BASE = 2;
+
 	glClear(GL_COLOR_BUFFER_BIT);
 	glMatrixMode(GL_MODELVIEW);       
 	glLoadIdentity();       
@@ -192,21 +232,20 @@ static void display_function(void)
 	glutPrint(WIDTH/128, HEIGHT-30, printBuffer, 0.85f, 0.85f, 0.85f, 0.0f);
 	sprintf(printBuffer,"Window witdh: %.2f Sec",(float)N/((float)F_SAMP/(float)SUBSAMPLE));
 	glutPrint(WIDTH/128, HEIGHT-45, printBuffer, 0.85f, 0.85f, 0.85f, 0.0f);
-	
-	int x_step = 1;
-	int step = (N/2) / WIDTH;
-	// if(step == 0)
-	// 	x_step = WIDTH / (N/2);
-	int gain = 5;
-	int maximum = 0;
-	int max_index;
-	int BASE = 2;
 
 	glBegin(GL_LINES);     
 
 		glColor3f ( 0.75, 0.75, 0.75);       
 		glVertex2f( 0, BASE);         
 		glVertex2f( WIDTH, BASE); 
+
+		glColor3f ( 0.95, 0.85, 0.85);       
+		glVertex2f( xCursor1, 0);         
+		glVertex2f( xCursor1, HEIGHT/4); 
+
+		glColor3f ( 0.75, 0.85, 0.85);       
+		glVertex2f( xCursor2, 0);         
+		glVertex2f( xCursor2, HEIGHT/4); 
 
 		for(i=0;i<WIDTH;i+=x_step)
 		{
@@ -223,15 +262,49 @@ static void display_function(void)
 			glColor3f ( 0.5, 0.5, 0.5);       
 			glVertex2f( i, (HEIGHT/2) + (100 * gain * prein[i*step/2][REAL]));         
 			glVertex2f( i+x_step, (HEIGHT/2) + (100 * gain * prein[(i+x_step)*step/2][REAL]));  
-		}
+		}		
+
+		glColor3f ( 0.85, 0.85, 0.85);       
+		glVertex2f( (max_index/step), (gain * powArray[max_index]));         
+		glVertex2f( (max_index/step), 20 + (gain * powArray[max_index])); 
 
 	glEnd();
 
+	sprintf(printBuffer,"Amplitude: %f",powArray[max_index]);
+	glutPrint(max_index/step, 40 + (gain * powArray[max_index]), printBuffer, 0.05f, 0.05f, 0.05f, 0.0f);
 	sprintf(printBuffer,"Peak freq: %.2f Hz",(float)max_index*freq_step);
-	glutPrint(WIDTH/128, HEIGHT-60, printBuffer, 0.85f, 0.85f, 0.85f, 0.0f);
-	
+	glutPrint((max_index/step), 60 + (gain * powArray[max_index]), printBuffer, 0.05f, 0.05f, 0.05f, 0.0f);
 
-	//glFlush();
+	int currsor1_bottom;
+
+	if(xCursor1 != 0)
+	{
+		sprintf(printBuffer,"Cursor Amplitude: %f",powArray[xCursor1*step]);
+		glutPrint(WIDTH/128,HEIGHT-60, printBuffer, 0.95f, 0.85f, 0.85f, 0.0f);
+		sprintf(printBuffer,"Cursor freq: %.2f Hz",(float)xCursor1*freq_step*step);
+		glutPrint(WIDTH/128,HEIGHT-75, printBuffer, 0.95f, 0.85f, 0.85f, 0.0f);
+		currsor1_bottom = 75;	
+	}
+	else
+	{
+		sprintf(printBuffer,"Cursor Off");
+		glutPrint(WIDTH/128,HEIGHT-60, printBuffer, 0.95f, 0.85f, 0.85f, 0.0f);
+		currsor1_bottom = 60;
+	}
+
+	if(xCursor2 != 0)
+	{
+		sprintf(printBuffer,"Cursor Amplitude: %f",powArray[xCursor2*step]);
+		glutPrint(WIDTH/128,HEIGHT-(currsor1_bottom+15), printBuffer, 0.75f, 0.85f, 0.85f, 0.0f);
+		sprintf(printBuffer,"Cursor freq: %.2f Hz",(float)xCursor2*freq_step*step);
+		glutPrint(WIDTH/128,HEIGHT-(currsor1_bottom+30), printBuffer, 0.75f, 0.85f, 0.85f, 0.0f);
+	}
+	else
+	{
+		sprintf(printBuffer,"Cursor Off");
+		glutPrint(WIDTH/128,HEIGHT-(currsor1_bottom+15), printBuffer, 0.75f, 0.85f, 0.85f, 0.0f);
+	}
+
 	glutSwapBuffers();
 }
 
@@ -289,9 +362,11 @@ int main(int argc, char** argv)
 	glutCreateWindow("Real time FFT graph");
 	glutIdleFunc(&idle_function);
 	glutDisplayFunc(&display_function);
+	glutMouseFunc(&myMouseFunc);
+	glutKeyboardFunc(keyb);
+	glEnable(GL_BLEND);
 
 	myinit();
-	
 	glutMainLoop();
 	
 	return 0;
