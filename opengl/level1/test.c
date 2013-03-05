@@ -1,8 +1,7 @@
 /**************************************************************************
+* Real time FFT + time domain graph with openGL
 *
-*
-*
-*
+* ihsan Kehribar - March 2013
 **************************************************************************/
 #include <stdlib.h>
 #ifdef __APPLE__
@@ -12,6 +11,7 @@
 #endif
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 #include <math.h>
 #include "portaudio.h"
 #include "fdacoefs.h" // Coefficients for 44.1kHz sample rate, ~2kHz cutoff low pass
@@ -23,10 +23,10 @@
 #define F_SAMP 44100
 #define F_TEST 256
 #define SAMPLE_RATE  F_SAMP
-#define FRAMES_PER_BUFFER 128
+#define FRAMES_PER_BUFFER 512
 #define FIRSIZE 101 
 #define FILTER_ENABLE 1
-#define SUBSAMPLE 4
+#define SUBSAMPLE 8
 #define SAMPLECOUNT (FRAMES_PER_BUFFER / SUBSAMPLE)
 #define PI 3.14159265358979
 
@@ -34,6 +34,7 @@
 const int HEIGHT = 256;
 const int WIDTH = 800;
 
+int errCount = 0;
 float xcirc[FIRSIZE]; 
 uint16_t newest = 0;
 float sampleBlock_sub[SAMPLECOUNT];
@@ -50,6 +51,7 @@ fftw_complex *in, *out, *prein; /* pointers for FFT input, output */
 fftw_plan my_plan; /* store the type of FFT we want to perform */
 float hammingWindow[N];
 float powArray[N];
+char printBuffer[128];
 
 float updateFir(float newSample)
 {
@@ -108,8 +110,11 @@ void createHamming(float* array,int size)
 static void idle_function(void)
 {
 	err = Pa_ReadStream( stream, sampleBlock, FRAMES_PER_BUFFER );
+	
+	if(err != paNoError)
+		printf("Error count: %d\tProblem: %s\n",++errCount,Pa_GetErrorText(err));
 
-   #ifdef FILTER_ENABLE
+   #if FILTER_ENABLE
 	   /* apply the low pass filter */
 	   for(i=0;i<FRAMES_PER_BUFFER;i++)
 	   {
@@ -160,12 +165,36 @@ static void idle_function(void)
 	glutPostRedisplay();
 }
 
+// Here is the function 
+void glutPrint(float x, float y, char* text, float r, float g, float b, float a)
+{ 
+    if(!text || !strlen(text)) return; 
+    bool blending = false; 
+    if(glIsEnabled(GL_BLEND)) blending = true; 
+    glEnable(GL_BLEND); 
+    glColor4f(r,g,b,a); 
+    glRasterPos2f(x,y); 
+    while (*text) { 
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_10, *text); 
+        text++; 
+    } 
+    if(!blending) glDisable(GL_BLEND); 
+}  
+
 static void display_function(void)
 {
 	glClear(GL_COLOR_BUFFER_BIT);
 	glMatrixMode(GL_MODELVIEW);       
 	glLoadIdentity();       
 
+	sprintf(printBuffer,"Window witdh: %.2f Sec",(float)N/((float)F_SAMP/(float)SUBSAMPLE));
+	glutPrint(WIDTH/128, (7*HEIGHT/8)-15, printBuffer, 0.85f, 0.85f, 0.85f, 0.0f);
+	sprintf(printBuffer,"Freq step: %.2f Hz",freq_step);
+	glutPrint(WIDTH/128, (7*HEIGHT/8), printBuffer, 0.85f, 0.85f, 0.85f, 0.0f);
+	sprintf(printBuffer,"F_sampling: %.2f Hz",(float)F_SAMP/SUBSAMPLE);
+	glutPrint(WIDTH/128, (7*HEIGHT/8)+15, printBuffer, 0.85f, 0.85f, 0.85f, 0.0f);
+	
+	
 	int x_step = 1;
 	int step = (N/2) / WIDTH;
 	int gain = 10;
@@ -177,11 +206,15 @@ static void display_function(void)
 			glColor3f ( 1.0, 0.0, 0.0);       
 			glVertex2f( i, gain * powArray[i*step]);         
 			glVertex2f( i+x_step, gain * powArray[(i+x_step)*step]);       
+		
+			glColor3f ( 0.0, 0.0, 0.0);       
+			glVertex2f( i, (HEIGHT/2) + (100 * gain * prein[i*step/2][REAL]));         
+			glVertex2f( i+x_step, (HEIGHT/2) + (100 * gain * prein[(i+x_step)*step/2][REAL]));  
 		}
 
 	glEnd();
 
-	glFlush();
+	//glFlush();
 	glutSwapBuffers();
 }
 
