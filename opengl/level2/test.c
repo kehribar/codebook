@@ -13,18 +13,26 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include <sys/socket.h>	
+#include <arpa/inet.h>
+#include <unistd.h>
 #include "fftw3.h"
 
-#define N 16384
+#define N 2048
 #define REAL 0
 #define IMAG 1
-#define F_SAMP 1000
-#define SAMPLECOUNT 100
+#define F_SAMP 200
+#define SAMPLECOUNT 10
 #define PI 3.14159265358979
 
 /* default window size */
 const int HEIGHT = 450;
 const int WIDTH = 1000;
+
+int sock;
+char buff[256];
+FILE* loglogfile;	
+struct sockaddr_in server;
 
 int i,q,t;
 int win_max;
@@ -36,6 +44,7 @@ double win_rms;
 double win_mean;
 float powArray[N];
 float *sampleBlock;
+int cursor_selection;
 char printBuffer[128];
 float hammingWindow[N];
 float freq_gain = 0.005f;
@@ -75,25 +84,38 @@ float val = 0.0;
 int direction = 1;
 
 static void idle_function(void)
-{
+{	
 	double power;
 	double amplitude;
+	unsigned int temp1;
+	unsigned int temp2;
+	unsigned int temp3;
+	unsigned int temp4;
+	unsigned int temp5;
 	
 	/* add the new inputs ... */
-	for(i=0;i<SAMPLECOUNT;i++)
+	for(i=0;i<SAMPLECOUNT;i+=5)
 	{
-		sampleBlock[i] = val;
-		
-		if(val>max)
-			direction = 0;
-		
-		if(val<0)
-			direction = 1;
-			
-		if(direction)
-			val += 100;
-		else
-			val -= 100;
+		/* receive data from socket */
+		memset(buff,0x00,sizeof(buff));
+		if( recv(sock , buff , sizeof(buff) , 0) < 0)
+		{
+			puts("recv failed");
+			break;
+		}
+		sscanf(buff,"%u %u %u %u %u\n",&temp1,&temp2,&temp3,&temp4,&temp5);
+		sampleBlock[i+0] = temp1;
+		sampleBlock[i+1] = temp2;
+		sampleBlock[i+2] = temp3;
+		sampleBlock[i+3] = temp4;
+		sampleBlock[i+4] = temp5;
+		#if 1
+			printf("%d\n",temp1);
+			printf("%d\n",temp2);
+			printf("%d\n",temp3);
+			printf("%d\n",temp4);
+			printf("%d\n",temp5);
+		#endif
 	}
 	
 	/* shift the input buffer */
@@ -109,7 +131,7 @@ static void idle_function(void)
 		prein[i][REAL] = sampleBlock[i-N+SAMPLECOUNT];
 		prein[i][IMAG] = 0;
 		#if 0
-			fprintf(record,"%f\n",sampleBlock_sub[i-N+SAMPLECOUNT]);
+			fprintf(record,"%f\n",sampleBlock[i-N+SAMPLECOUNT]);
 		#endif
 	}
 
@@ -386,10 +408,59 @@ void myinit(void)
 	glMatrixMode(GL_MODELVIEW);
 	is_paused = 0;       
 	high_pass = 0;
+	cursor_selection = 0;
 }
 
 int main(int argc, char** argv)
 {	
+	if(argc==1)
+	{
+		printf("Please write the server IP\n");
+		return 0;
+	}
+
+	char* ip_address = argv[1];
+	printf("Server ip address: %s\n",ip_address);
+	
+	loglogfile = fopen("logfile.txt","w");
+	if(loglogfile == NULL)
+	{
+		printf("Couldn't create the log file!\n");
+		return -1;
+	}
+	else
+	{
+		printf("Log file created ...\n");
+	}
+	fprintf(loglogfile, "Hi!\n");
+	
+	sock = socket(AF_INET , SOCK_STREAM , 0);
+	if (sock == -1)
+	{
+		printf("Could not create socket");
+	}
+	printf("Socket created\n");
+	
+	server.sin_addr.s_addr = inet_addr(ip_address);
+	server.sin_family = AF_INET;
+	server.sin_port = htons(8888);
+
+	if (connect(sock , (struct sockaddr *)&server , sizeof(server)) < 0)
+	{
+		perror("Connect failed. Error");
+		return 1;
+	}
+	printf("Connected\n\n");
+	
+	sprintf(buff,"a,1234\n");
+	
+	/* send data to remote device */
+	if( send(sock , buff , strlen(buff) , 0) < 0)
+	{
+		printf("Send failed\n");
+		return -1;
+	}
+	
 	in = (fftw_complex*) fftw_malloc(sizeof(fftw_complex)*N); /* memory allocation */
 	prein = (fftw_complex*) fftw_malloc(sizeof(fftw_complex)*N); /* memory allocation */
 	out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex)*N); /* pointers in and out are of type fftw_complex*/
