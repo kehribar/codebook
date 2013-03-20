@@ -18,11 +18,11 @@
 #include <unistd.h>
 #include "fftw3.h"
 
-#define N 8192
+#define N 2048
 #define REAL 0
 #define IMAG 1
-#define F_SAMP 500
-#define SAMPLECOUNT 10
+#define F_SAMP 1000
+#define SAMPLECOUNT 200
 #define PI 3.14159265358979
 
 /* default window size */
@@ -109,7 +109,7 @@ static void idle_function(void)
 		sampleBlock[i+2] = temp3;
 		sampleBlock[i+3] = temp4;
 		sampleBlock[i+4] = temp5;
-		#if 1
+		#if 0
 			printf("%d\n",temp1);
 			printf("%d\n",temp2);
 			printf("%d\n",temp3);
