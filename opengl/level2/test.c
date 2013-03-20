@@ -18,10 +18,10 @@
 #include <unistd.h>
 #include "fftw3.h"
 
-#define N 2048
+#define N 8192
 #define REAL 0
 #define IMAG 1
-#define F_SAMP 200
+#define F_SAMP 500
 #define SAMPLECOUNT 10
 #define PI 3.14159265358979
 
@@ -200,10 +200,10 @@ void myMouseFunc( int button, int state, int x, int y )
 	}
 }
 
-#define FREQ_GAIN_FINE 0.001
-#define FREQ_GAIN_COARSE 0.01
-#define TIME_GAIN_FINE 0.0001
-#define TIME_GAIN_COARSE 0.001
+#define FREQ_GAIN_FINE 0.01
+#define FREQ_GAIN_COARSE 0.1
+#define TIME_GAIN_FINE 0.001
+#define TIME_GAIN_COARSE 0.01
 
 void keyb(unsigned char key, int x, int y)
 {
